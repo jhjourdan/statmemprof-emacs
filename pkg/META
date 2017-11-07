@@ -1,0 +1,7 @@
+description = "Emacs client for statistical memory profiler"
+version = "%%VERSION_NUM%%"
+requires = "sturgeon.recipes_server"
+archive(byte) = "statmemprof_emacs.cma"
+archive(native) = "statmemprof_emacs.cmxa"
+plugin(byte) = "statmemprof_emacs.cma"
+plugin(native) = "statmemprof_emacs.cmxs"
