@@ -1,3 +1,5 @@
 PKG bytes
+PKG inuit
+PKG sturgeon.recipes_server
 S src
 B _build/**
