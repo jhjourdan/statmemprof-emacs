@@ -1,4 +1,4 @@
-vX.Y.Z YYYY-MM-DD Location
---------------------------
+v0.1.0 2017-11-08
+-----------------
 
-First release. 
+First release.
