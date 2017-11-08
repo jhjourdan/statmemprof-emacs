@@ -122,14 +122,24 @@ let dump () =
 
 let min_samples = ref 0
 
-let sturgeon_dump k =
+let sturgeon_dump sampling_rate k =
   let print_acc k acc =
     let n = acc.(0) + acc.(1) + acc.(2) in
     let percent x = float x /. float n *. 100.0 in
-    if n > 0 then
-      Cursor.printf k
-        " (%02.2f%% minor, %02.2f%% major, %02.2f%% marshal)"
-        (percent acc.(0)) (percent acc.(1)) (percent acc.(2))
+    if n > 0 then begin
+      Cursor.printf k " (";
+      if acc.(0) > 0 then begin
+        Cursor.printf k "%02.2f%% minor" (percent acc.(0));
+        if acc.(0) < n then Cursor.printf k ", "
+      end;
+      if acc.(1) > 0 then begin
+        Cursor.printf k "%02.2f%% major" (percent acc.(1));
+        if acc.(2) > 0 then Cursor.printf k ", "
+      end;
+      if acc.(2) > 0 then
+        Cursor.printf k "%02.2f%% unmarshal" (percent acc.(2));
+      Cursor.printf k ")"
+    end
   in
   let rec aux root (slot, SSTC (si, n, bt)) =
     if n >= !min_samples then (
@@ -141,9 +151,12 @@ let sturgeon_dump k =
       let node = Widget.Tree.add ?children root in
       begin match Printexc.Slot.location (convert_raw_backtrace_slot slot) with
       | Some { filename; line_number; start_char; end_char } ->
-        Cursor.printf node "%7d | %s:%d %d-%d" n filename line_number start_char end_char
+        Cursor.printf node "%11.2f MB | %s:%d %d-%d"
+                      (float n /. sampling_rate *. float Sys.word_size /. 8e6)
+                      filename line_number start_char end_char
       | None ->
-        Cursor.printf node "%7d | ?" n
+        Cursor.printf node "%11.2f MB | ?"
+                      (float n /. sampling_rate *. float Sys.word_size /. 8e6)
       end;
       print_acc node si
     )
@@ -151,7 +164,8 @@ let sturgeon_dump k =
   let (SSTC (si, n, bt)) = dump () in
   let root = Widget.Tree.make k in
   let node = Widget.Tree.add root ~children:(fun root' -> List.iter (aux root') bt) in
-  Cursor.printf node "Total %7d" n;
+  Cursor.printf node "%11.2f MB total "
+                (float n /. sampling_rate *. float Sys.word_size /. 8e6);
   print_acc node si
 
 let started = ref false
@@ -169,9 +183,20 @@ let start sampling_rate callstack_size min_samples_print =
     Cursor.text cursor "\n";
     let body = Cursor.sub cursor in
     Cursor.link menu "[Refresh]"
-      (fun _ -> Cursor.clear body; sturgeon_dump body);
-    sturgeon_dump body
+      (fun _ -> Cursor.clear body; sturgeon_dump sampling_rate body);
+    sturgeon_dump sampling_rate body
   in
   ignore (Thread.create (fun () ->
               dump_thread_id := Thread.id (Thread.self ());
-              Sturgeon_recipes_server.main_loop server) ())
+              Sturgeon_recipes_server.main_loop server) ());
+
+  (* HACK : when the worker thread computes, it does not give back the
+    control to the sturgeon thread easily. As a result, the sturgeon
+    interface is not responsive.
+
+    We solve this issue by periodically suspending the worker thread
+    for a very short time. *)
+  let preempt signal = Thread.delay 1e-6 in
+  Sys.set_signal Sys.sigvtalrm (Sys.Signal_handle preempt);
+  ignore (Unix.setitimer Unix.ITIMER_VIRTUAL
+             { Unix.it_interval = 1e-2; Unix.it_value = 1e-2 })

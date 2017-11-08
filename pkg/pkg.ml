@@ -4,5 +4,5 @@
 open Topkg
 
 let () =
-  Pkg.describe "statmemprof_emacs" @@ fun c ->
+  Pkg.describe "statmemprof-emacs" @@ fun c ->
   Ok [ Pkg.mllib "src/statmemprof_emacs.mllib"; ]
