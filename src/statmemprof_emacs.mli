@@ -1,6 +1,6 @@
 (*---------------------------------------------------------------------------
-   Copyright (c) 2017 Jacques-Henri Jourdan and Frédéric Bour. All rights
-   reserved. Distributed under the MIT license.
+   Copyright (c) 2017 CNRS. All rights reserved. Distributed under the MIT
+   license.
   ---------------------------------------------------------------------------*)
 
 (** [start sampling_rate callstack_size min_sample_print] starts the

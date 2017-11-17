@@ -1,6 +1,6 @@
 (*---------------------------------------------------------------------------
-   Copyright (c) 2017 Jacques-Henri Jourdan. All rights reserved. Distributed
-   under the MIT license.
+   Copyright (c) 2017 CNRS. All rights reserved. Distributed under the MIT
+   license.
   ---------------------------------------------------------------------------*)
 
 open Memprof
