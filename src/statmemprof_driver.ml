@@ -50,10 +50,9 @@ let samples = ref (Array.make min_buf_size empty_ephe)
 let n_samples = ref 0
 let samples_lock = Mutex.create ()
 
-(* Data structure management functions. These should not be called when
-   the sampling is active. *)
+(* Data structure management functions. *)
 
-let clean = with_lock samples_lock @@ fun () ->
+let clean () =
   let s = !samples and sz = !n_samples in
   let rec aux i j =
     if i >= sz then j
@@ -70,7 +69,7 @@ let clean = with_lock samples_lock @@ fun () ->
     samples := s_new
   end
 
-let push = with_lock samples_lock @@ fun e ->
+let push e =
   if !n_samples = Array.length !samples then clean ();
   !samples.(!n_samples) <- e;
   incr n_samples
@@ -82,7 +81,7 @@ let callback : sample_info Memprof.callback = fun info ->
   else
     let ephe = Ephemeron.K1.create () in
     Ephemeron.K1.set_data ephe info;
-    push ephe;
+    with_lock samples_lock push ephe;
     Some ephe
 
 (* Control functions *)
