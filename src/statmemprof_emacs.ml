@@ -48,10 +48,10 @@ let push e =
 
 (* The callback we use. *)
 
-let dump_thread_id = ref (-1)
+let dump_thread_id = ref None
 
 let callback : sample_info Memprof.callback = fun info ->
-  if Thread.id (Thread.self ()) = !dump_thread_id then None
+  if Some (Thread.id (Thread.self ())) = !dump_thread_id then None
   else
     let ephe = Ephemeron.K1.create () in
     Ephemeron.K1.set_data ephe info;
@@ -187,7 +187,7 @@ let start sampling_rate callstack_size min_samples_print =
     sturgeon_dump sampling_rate body
   in
   ignore (Thread.create (fun () ->
-              dump_thread_id := Thread.id (Thread.self ());
+              dump_thread_id := Some (Thread.id (Thread.self ()));
               Sturgeon_recipes_server.main_loop server) ());
 
   (* HACK : when the worker thread computes, it does not give back the
