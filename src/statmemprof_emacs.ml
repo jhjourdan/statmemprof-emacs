@@ -7,7 +7,30 @@ open Memprof
 open Printexc
 open Inuit
 
-(* Data structures *)
+(* Helper function for mutex with correct handling of exceptions. *)
+
+let with_lock m f x =
+  Mutex.lock m;
+  match f x with
+  | exception e -> Mutex.unlock m; raise e
+  | y -> Mutex.unlock m; y
+
+(* Sampling is deactivated for these threads. *)
+
+module ISet = Set.Make (
+  struct
+    type t = int
+    let compare : int -> int -> int = fun x y -> Pervasives.compare x y
+  end)
+
+let disabled_threads_ids = ref ISet.empty
+let disabled_threads_mutex = Mutex.create ()
+let add_disabled_thread = with_lock disabled_threads_mutex @@ fun thread ->
+  disabled_threads_ids := ISet.add (Thread.id thread) !disabled_threads_ids
+let remove_disabled_thread = with_lock disabled_threads_mutex @@ fun thread ->
+  disabled_threads_ids := ISet.remove (Thread.id thread) !disabled_threads_ids
+
+(* Data structures for sampled blocks *)
 
 let min_buf_size = 1024
 let empty_ephe = Ephemeron.K1.create ()
@@ -39,19 +62,27 @@ let clean () =
     samples := s_new
   end
 
-let push e =
-  Mutex.lock samples_lock;
+let push = with_lock samples_lock @@ fun e ->
   if !n_samples = Array.length !samples then clean ();
   !samples.(!n_samples) <- e;
-  incr n_samples;
-  Mutex.unlock samples_lock
+  incr n_samples
 
-(* The callback we use. *)
+let dump = with_lock samples_lock @@ fun () ->
+  let s, sz = !samples, !n_samples in
+  let rec aux acc i =
+    if i >= sz then acc
+    else match Ephemeron.K1.get_data s.(i) with
+      | None -> aux acc (i+1)
+      | Some s -> aux (s :: acc) (i+1)
+  in
+  aux [] 0
 
-let dump_thread_id = ref None
+(* Our callback. *)
 
 let callback : sample_info Memprof.callback = fun info ->
-  if Some (Thread.id (Thread.self ())) = !dump_thread_id then None
+  (* Reading from the reference is atomic, so no need to take the lock
+     here. *)
+  if ISet.mem (Thread.id (Thread.self ())) !disabled_threads_ids then None
   else
     let ephe = Ephemeron.K1.create () in
     Ephemeron.K1.set_data ephe info;
@@ -63,7 +94,7 @@ let callback : sample_info Memprof.callback = fun info ->
 type sampleTree =
     STC of sample_info list * int * (raw_backtrace_slot, sampleTree) Hashtbl.t
 
-let add_sampleTree (s:sample_info) (t:sampleTree) : sampleTree =
+let add_sampleTree (t:sampleTree) (s:sample_info) : sampleTree =
   let rec aux idx (STC (sl, n, sth)) =
     if idx >= Printexc.raw_backtrace_length s.callstack then
       STC(s::sl, n+s.n_samples, sth)
@@ -107,18 +138,10 @@ let rec sort_sampleTree (t:sampleTree) : sortedSampleTree =
   in
   SSTC (acc_si sl children, n, children)
 
-let dump () =
-  Mutex.lock samples_lock;
-  let s, sz = !samples, !n_samples in
-  let rec aux st i =
-    if i >= sz then st
-    else match Ephemeron.K1.get_data s.(i) with
-      | None -> aux st (i+1)
-      | Some s -> aux (add_sampleTree s st) (i+1)
-  in
-  let st = aux (STC ([], 0, Hashtbl.create 3)) 0 in
-  Mutex.unlock samples_lock;
-  sort_sampleTree st
+let dump_SST () =
+  dump ()
+  |> List.fold_left add_sampleTree (STC ([], 0, Hashtbl.create 3))
+  |> sort_sampleTree
 
 let min_samples = ref 0
 
@@ -161,7 +184,7 @@ let sturgeon_dump sampling_rate k =
       print_acc node si
     )
   in
-  let (SSTC (si, n, bt)) = dump () in
+  let (SSTC (si, n, bt)) = dump_SST () in
   let root = Widget.Tree.make k in
   let node = Widget.Tree.add root ~children:(fun root' -> List.iter (aux root') bt) in
   Cursor.printf node "%11.2f MB total "
@@ -187,7 +210,7 @@ let start sampling_rate callstack_size min_samples_print =
     sturgeon_dump sampling_rate body
   in
   ignore (Thread.create (fun () ->
-              dump_thread_id := Some (Thread.id (Thread.self ()));
+              add_disabled_thread (Thread.self ());
               Sturgeon_recipes_server.main_loop server) ());
 
   (* HACK : when the worker thread computes, it does not give back the
