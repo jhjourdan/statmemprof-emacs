@@ -13,11 +13,12 @@ available: [ compiler = "4.03.0+statistical-memprof"
            | compiler = "4.06.0+statistical-memprof" ]
 depends:
 [
-  "ocamlfind" {build}
-  "ocamlbuild" {build}
-  "topkg" {build & >= "0.9.0"}
+  "jbuilder" {build}
   "sturgeon" { >= "0.3" }
   "inuit" { >= "0.3" }
 ]
 depopts: []
-build: [[ "ocaml" "pkg/pkg.ml" "build" "--dev-pkg" "%{pinned}%" ]]
+build: [
+  ["jbuilder" "subst" "-n" name] {pinned}
+  ["jbuilder" "build" "-p" name "-j" jobs]
+]
