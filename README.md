@@ -17,8 +17,8 @@ are available on opam. Then you can use the following command:
 
     opam install statmemprof-emacs
 
-If you don't use `opam` consult the [`opam`](opam) file for build
-instructions.
+If you don't use `opam` consult the [`opam`](statmemprof-emacs.opam) file for
+build instructions.
 
 ## Usage
 

@@ -1,24 +1,29 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "Jacques-Henri Jourdan <jacques-henri.jourdan@normalesup.org>"
-authors: ["Jacques-Henri Jourdan <jacques-henri.jourdan@normalesup.org>"
-          "Frédéric Bour <frederic.bour@lakaban.net>"]
+authors: [
+  "Jacques-Henri Jourdan <jacques-henri.jourdan@normalesup.org>"
+  "Frédéric Bour <frederic.bour@lakaban.net>"
+]
+license: "MIT"
 homepage: "https://github.com/jhjourdan/statmemprof-emacs"
 doc: "https://jhjourdan.mketjh.fr//statmemprof-emacs/doc"
-license: "MIT"
-dev-repo: "https://github.com/jhjourdan/statmemprof-emacs.git"
 bug-reports: "https://github.com/jhjourdan/statmemprof-emacs/issues"
-tags: []
-available: [ compiler = "4.03.0+statistical-memprof"
-           | compiler = "4.05.0+statistical-memprof"
-           | compiler = "4.06.0+statistical-memprof" ]
-depends:
-[
+depends: [
+  "ocaml"
+  "ocaml-variants"
+    {= "4.03.0+statistical-memprof" | = "4.05.0+statistical-memprof" |
+     = "4.06.0+statistical-memprof"}
   "jbuilder" {build}
-  "sturgeon" { >= "0.3" }
-  "inuit" { >= "0.3" }
+  "sturgeon" {>= "0.3"}
+  "inuit" {>= "0.3"}
 ]
-depopts: []
 build: [
   ["jbuilder" "subst" "-n" name] {pinned}
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
+dev-repo: "git+https://github.com/jhjourdan/statmemprof-emacs.git"
+synopsis: "Emacs client for statistical memory profiler"
+description: """
+statmemprof-emacs is an Sturgeon/emacs front-end of the statmemprof
+statistical memory profiler for OCaml.
+"""
