@@ -34,3 +34,5 @@ installation), and type M-x sturgeon-connect.
 After sturgeon-connect you might be asked for a path for the sturgeon-connector command, which will be inside the ```.opam/{ocaml-version}/bin``` directory.
 
 After which you will be asked for a socket, which you can find inside the ```/tmp/sturgeon.1000/{your_process}memprof.{pid}.sturgeon```
+
+For an example usage, you can also have a look here: http://tezos.gitlab.io/mainnet/developer/profiling.html?highlight=statmemprof#memory-profiling-the-ocaml-heap
