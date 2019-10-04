@@ -33,6 +33,6 @@ installation), and type M-x sturgeon-connect.
 
 Then, you might be asked:
   - for a path for the sturgeon-connector command, which will be in
-    your opam swich ```bin`` directory;
+    your opam swich's ```bin``` directory;
   - a socket to connect to, which emacs auto-complete will help you to
     find.
