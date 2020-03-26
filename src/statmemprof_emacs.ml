@@ -114,7 +114,7 @@ let sturgeon_dump sampling_rate k =
 
 let started = ref false
 let start sampling_rate callstack_size min_samples_print =
-  Statmemprof_driver.start sampling_rate callstack_size min_samples_print;
+  Statmemprof_driver.start sampling_rate callstack_size;
   min_samples := min_samples_print;
   let name = Filename.basename Sys.executable_name in
   let server =

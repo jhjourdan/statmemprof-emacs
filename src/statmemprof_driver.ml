@@ -91,10 +91,7 @@ let major_alloc_callback = callback false
 
 (* Control functions *)
 
-let started = ref false
-let start sampling_rate callstack_size min_samples_print =
-  if !started then failwith "Already started";
-  started := true;
+let start sampling_rate callstack_size =
   Memprof.start ~sampling_rate ~callstack_size
     ~minor_alloc_callback ~major_alloc_callback
     ()
