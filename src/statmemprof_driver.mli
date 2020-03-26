@@ -3,6 +3,8 @@
    license.
   ---------------------------------------------------------------------------*)
 
+type sample_info = { minor : bool ; info : Gc.Memprof.allocation }
+
 (** After a call to this functions, blocks allocated by the given
     thread will no longer be sampled. *)
 val add_disabled_thread : Thread.t -> unit
@@ -22,7 +24,7 @@ val no_sampling : ('a -> 'b) -> 'a -> 'b
 val reset : unit -> unit
 
 (** [dump ()] dumps the current set of tracked blocks. *)
-val dump : unit -> Memprof.sample_info list
+val dump : unit -> sample_info list
 
 (** [start sampling_rate callstack_size min_sample_print] starts the
     sampling on the current process.
