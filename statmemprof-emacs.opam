@@ -10,11 +10,7 @@ doc: "https://jhjourdan.mketjh.fr//statmemprof-emacs/doc"
 bug-reports: "https://github.com/jhjourdan/statmemprof-emacs/issues"
 depends: [
   "ocaml"
-  "ocaml-variants"
-    { ="4.03.0+statistical-memprof"
-    | ="4.05.0+statistical-memprof"
-    | ="4.06.0+statistical-memprof"
-    | ="4.07.1+statistical-memprof"}
+  "ocaml-variants" {>="4.11.0+trunk"}
   "dune" {build & >= "1.0"}
   "sturgeon" {>= "0.3"}
   "inuit" {>= "0.3"}
@@ -26,6 +22,6 @@ build: [
 dev-repo: "git+https://github.com/jhjourdan/statmemprof-emacs.git"
 synopsis: "Emacs client for statistical memory profiler"
 description: """
-statmemprof-emacs is an Sturgeon/emacs front-end of the statmemprof
+statmemprof-emacs is an Sturgeon/emacs front-end of the memprof
 statistical memory profiler for OCaml.
 """

@@ -6,40 +6,43 @@
 open Printexc
 open Inuit
 
+module Memprof = Gc.Memprof
+
 (* Reading and printing the set of samples. *)
 
+type sample_info = Statmemprof_driver.sample_info
+
 type sampleTree =
-    STC of Memprof.sample_info list * int *
+    STC of sample_info list * int *
              (raw_backtrace_slot, sampleTree) Hashtbl.t
 
-let add_sampleTree (t:sampleTree) (s:Memprof.sample_info) : sampleTree =
+let add_sampleTree (t:sampleTree) (s:sample_info) : sampleTree =
   let rec aux idx (STC (sl, n, sth)) =
-    if idx >= Printexc.raw_backtrace_length s.callstack then
-      STC(s::sl, n+s.n_samples, sth)
+    if idx >= Printexc.raw_backtrace_length s.info.callstack then
+      STC(s::sl, n+s.info.n_samples, sth)
     else
-      let li = Printexc.get_raw_backtrace_slot s.callstack idx in
+      let li = Printexc.get_raw_backtrace_slot s.info.callstack idx in
       let child =
         try Hashtbl.find sth li
         with Not_found -> STC ([], 0, Hashtbl.create 3)
       in
       Hashtbl.replace sth li (aux (idx+1) child);
-      STC(sl, n+s.n_samples, sth)
+      STC(sl, n+s.info.n_samples, sth)
   in
   aux 0 t
 
 type sortedSampleTree =
     SSTC of int array * int * (raw_backtrace_slot * sortedSampleTree) list
 
+let kind (s : sample_info) =
+  if s.info.unmarshalled then 2
+  else if s.minor then 0 else 1
+
 let acc_si si children =
   let acc = Array.make 3 0 in
   List.iter (fun s ->
-    let o = match s.Memprof.kind with
-      | Memprof.Minor -> 0
-      | Memprof.Major -> 1
-      | Memprof.Major_postponed -> 1
-      | Memprof.Serialized -> 2
-    in
-    acc.(o) <- acc.(o) + s.Memprof.n_samples;
+    let o = kind s in
+    acc.(o) <- acc.(o) + s.info.n_samples;
   ) si;
   List.iter (fun (_, SSTC (acc',_,_)) ->
     acc.(0) <- acc.(0) + acc'.(0);
@@ -111,7 +114,7 @@ let sturgeon_dump sampling_rate k =
 
 let started = ref false
 let start sampling_rate callstack_size min_samples_print =
-  Statmemprof_driver.start sampling_rate callstack_size min_samples_print;
+  Statmemprof_driver.start sampling_rate callstack_size;
   min_samples := min_samples_print;
   let name = Filename.basename Sys.executable_name in
   let server =

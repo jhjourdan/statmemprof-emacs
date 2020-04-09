@@ -3,7 +3,7 @@
    license.
   ---------------------------------------------------------------------------*)
 
-open Memprof
+module Memprof = Gc.Memprof
 
 (* Helper function for mutex with correct handling of exceptions. *)
 
@@ -18,7 +18,7 @@ let with_lock m f x =
 module ISet = Set.Make (
   struct
     type t = int
-    let compare : int -> int -> int = fun x y -> Pervasives.compare x y
+    let compare : int -> int -> int = fun x y -> Stdlib.compare x y
   end)
 
 let disabled_threads_ids = ref ISet.empty
@@ -43,6 +43,8 @@ let no_sampling f x =
     end
 
 (* Data structures for sampled blocks *)
+
+type sample_info = { minor : bool ; info : Memprof.allocation }
 
 let min_buf_size = 1024
 let empty_ephe = Ephemeron.K1.create ()
@@ -76,21 +78,23 @@ let push e =
 
 (* Our callback. *)
 
-let callback : sample_info Memprof.callback = fun info ->
+let callback minor = fun info ->
   if is_disabled_thread (Thread.self ()) then None
   else
     let ephe = Ephemeron.K1.create () in
-    Ephemeron.K1.set_data ephe info;
+    Ephemeron.K1.set_data ephe ({ minor ; info } : sample_info);
     with_lock samples_lock push ephe;
     Some ephe
 
+let minor_alloc_callback = callback true
+let major_alloc_callback = callback false
+
 (* Control functions *)
 
-let started = ref false
-let start sampling_rate callstack_size min_samples_print =
-  if !started then failwith "Already started";
-  started := true;
-  Memprof.start { sampling_rate; callstack_size; callback }
+let start sampling_rate callstack_size =
+  Memprof.start ~sampling_rate ~callstack_size
+    ~minor_alloc_callback ~major_alloc_callback
+    ()
 
 let reset = no_sampling @@ with_lock samples_lock @@ fun () ->
   samples := Array.make min_buf_size empty_ephe;
